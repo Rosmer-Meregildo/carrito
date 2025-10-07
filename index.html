@@ -1,0 +1,818 @@
+<!doctype html>
+<html lang="es">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+    <title>Juego de Carreras</title>
+    <meta name="color-scheme" content="light dark">
+    <style>
+        :root {
+            --bg: #0b1020;
+            --text: #e5e7eb;
+            --muted: #94a3b8;
+            --accent: #22d3ee;
+            --accent-2: #38bdf8;
+            --ring: rgba(34, 211, 238, .3);
+        }
+
+        @media (prefers-color-scheme: light) {
+            :root {
+                --bg: #f8fafc;
+                --text: #0f172a;
+                --muted: #475569;
+                --accent: #0ea5e9;
+                --accent-2: #22d3ee;
+                --ring: rgba(14, 165, 233, .22);
+            }
+        }
+
+        * {
+            box-sizing: border-box;
+            touch-action: manipulation;
+        }
+
+        html,
+        body {
+            height: 100%;
+        }
+
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--text);
+            font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica Neue, Arial;
+        }
+
+        .wrap {
+            position: fixed;
+            inset: 0;
+            display: grid;
+            grid-template-rows: 1fr auto;
+            padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+        }
+
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+            background: linear-gradient(#0b1020, #0b1020) no-repeat center/cover;
+        }
+
+        .hud {
+            position: fixed;
+            left: 0;
+            right: 0;
+            top: 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: .5rem;
+            padding: .6rem clamp(.6rem, 3vw, 1rem);
+            pointer-events: none;
+        }
+
+        .pill {
+            background: color-mix(in srgb, var(--text) 8%, transparent);
+            border: 1px solid color-mix(in srgb, var(--text) 15%, transparent);
+            color: var(--text);
+            border-radius: 999px;
+            padding: .35rem .7rem;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .hud-left, .hud-right {
+            display: flex; align-items: center; gap: .5rem;
+        }
+
+        .hud .iconbtn { pointer-events: auto; user-select: none; -webkit-tap-highlight-color: transparent; display:inline-flex; align-items:center; justify-content:center; width:36px; height:36px; border-radius:10px; border:1px solid color-mix(in srgb, var(--text) 14%, transparent); background: color-mix(in srgb, var(--text) 6%, transparent); color: var(--text); font-size:18px; }
+
+        .btnbar {
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            justify-content: center;
+            gap: .6rem;
+            padding: clamp(.4rem, 2.5vw, .9rem);
+        }
+
+        .btn {
+            pointer-events: auto;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: clamp(52px, 18vw, 80px);
+            height: clamp(52px, 18vw, 80px);
+            border-radius: 14px;
+            border: 1px solid color-mix(in srgb, var(--text) 14%, transparent);
+            background: color-mix(in srgb, var(--text) 6%, transparent);
+            color: var(--text);
+            font-size: clamp(20px, 6vw, 26px);
+            box-shadow: 0 0 0 0 transparent;
+            transition: border-color .2s, box-shadow .2s, transform .03s;
+        }
+
+        .btn:active {
+            transform: translateY(1px);
+        }
+
+        .btn:hover {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 8px var(--ring);
+            color: var(--accent);
+        }
+
+        .overlay {
+            position: fixed;
+            inset: 0;
+            display: grid;
+            place-items: center;
+            background: color-mix(in srgb, var(--bg) 40%, transparent);
+            backdrop-filter: blur(6px);
+        }
+
+        .card {
+            width: min(520px, 92vw);
+            background: color-mix(in srgb, var(--text) 6%, transparent);
+            border: 1px solid color-mix(in srgb, var(--text) 14%, transparent);
+            border-radius: 16px;
+            padding: 1rem;
+            text-align: center;
+        }
+
+        .card h1 {
+            margin: .2rem 0 .6rem;
+            font-size: 1.4rem;
+        }
+
+        .card p {
+            margin: .4rem 0;
+            color: var(--muted);
+        }
+
+        .card .row {
+            display: flex;
+            gap: .5rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: .8rem;
+        }
+
+        .chip {
+            border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+            color: var(--accent-2);
+            background: color-mix(in srgb, var(--accent) 12%, transparent);
+            border-radius: 999px;
+            padding: .25rem .6rem;
+            font-weight: 700;
+        }
+
+        .primary {
+            background: linear-gradient(135deg, var(--accent), var(--accent-2));
+            color: #0b1020;
+            border-color: transparent;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .form {
+            display:grid; gap:.7rem; margin-top:.8rem; text-align:left;
+        }
+        .field { display:grid; gap:.35rem; }
+        .field label { font-size:.9rem; color:var(--muted); }
+        .field input[type="color"], .field select {
+            width:100%; height:38px; border-radius:10px; border:1px solid color-mix(in srgb, var(--text) 14%, transparent); background: color-mix(in srgb, var(--text) 6%, transparent); color: var(--text); padding: 0 .6rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="wrap">
+        <canvas id="game" aria-label="Juego de carreras"></canvas>
+    </div>
+    <div class="hud" aria-live="polite">
+        <div class="hud-left">
+            <div class="pill" id="score">Puntos: 0</div>
+            <div class="pill" id="best">Mejor: 0</div>
+        </div>
+        <div class="hud-right">
+            <button class="iconbtn" id="openSettings" title="Ajustes" aria-label="Ajustes">⚙️</button>
+            <div class="pill" id="traffic">Tráfico: 0</div>
+            <div class="pill" id="speed">Velocidad: 0</div>
+            <div class="pill" id="fps">FPS: 0</div>
+        </div>
+    </div>
+    <div class="btnbar">
+        <button class="btn" id="left" aria-label="Izquierda">⟸</button>
+        <button class="btn" id="pause" aria-label="Pausar/Reanudar">⏯</button>
+        <button class="btn" id="right" aria-label="Derecha">⟹</button>
+    </div>
+    <div class="overlay" id="start">
+        <div class="card">
+            <h1>Juego de Carreras</h1>
+            <p>Mueve el auto, esquiva tráfico y suma puntos.</p>
+            <div class="row">
+                <span class="chip">PC: ← →, P pausa, R reiniciar</span>
+                <span class="chip">Móvil: botones táctiles</span>
+                <span class="chip" id="bestIntro">Mejor: 0</span>
+            </div>
+            <div class="form" role="form" aria-label="Personalización">
+                <div class="field">
+                    <label for="driverName">Nombre del piloto</label>
+                    <input id="driverName" type="text" inputmode="text" placeholder="Tu nombre" maxlength="16" style="height:38px; border-radius:10px; border:1px solid color-mix(in srgb, var(--text) 14%, transparent); background: color-mix(in srgb, var(--text) 6%, transparent); color: var(--text); padding: 0 .6rem;">
+                </div>
+                <div class="field">
+                    <label for="carColor">Color del auto</label>
+                    <input id="carColor" type="color" value="#22d3ee">
+                </div>
+                <div class="field">
+                    <label for="carModel">Modelo</label>
+                    <select id="carModel">
+                        <option value="sport">Deportivo</option>
+                        <option value="sedan">Sedán</option>
+                        <option value="compact">Compacto</option>
+                    </select>
+                </div>
+            </div>
+            <div class="row" style="margin-top:1rem">
+                <button class="btn primary" id="play">Jugar</button>
+            </div>
+        </div>
+    </div>
+    <div class="overlay hidden" id="settings">
+        <div class="card">
+            <h1>Ajustes</h1>
+            <div class="form" role="form" aria-label="Personalización">
+                <div class="field">
+                    <label for="driverName2">Nombre del piloto</label>
+                    <input id="driverName2" type="text" inputmode="text" placeholder="Tu nombre" maxlength="16" style="height:38px; border-radius:10px; border:1px solid color-mix(in srgb, var(--text) 14%, transparent); background: color-mix(in srgb, var(--text) 6%, transparent); color: var(--text); padding: 0 .6rem;">
+                </div>
+                <div class="field">
+                    <label for="carColor2">Color del auto</label>
+                    <input id="carColor2" type="color" value="#22d3ee">
+                </div>
+                <div class="field">
+                    <label for="carModel2">Modelo</label>
+                    <select id="carModel2">
+                        <option value="sport">Deportivo</option>
+                        <option value="sedan">Sedán</option>
+                        <option value="compact">Compacto</option>
+                    </select>
+                </div>
+            </div>
+            <div class="row" style="margin-top:1rem">
+                <button class="btn" id="closeSettings">Cerrar</button>
+            </div>
+        </div>
+    </div>
+    <div class="overlay hidden" id="gameover">
+        <div class="card">
+            <h1>¡Choque!</h1>
+            <p id="finalStats">Puntos: 0 · Máx. velocidad: 0</p>
+            <p id="bestStats" class="muted">Mejor: 0</p>
+            <div class="row" style="margin-top:.8rem">
+                <button class="btn primary" id="restart">Reiniciar</button>
+            </div>
+        </div>
+    </div>
+    <script>
+        (function () {
+            const canvas = document.getElementById('game');
+            const ctx = canvas.getContext('2d', { alpha: false, desynchronized: true });
+            const scoreEl = document.getElementById('score');
+            const bestEl = document.getElementById('best');
+            const speedEl = document.getElementById('speed');
+            const fpsEl = document.getElementById('fps');
+            const trafficEl = document.getElementById('traffic');
+            const startOverlay = document.getElementById('start');
+            const settingsOverlay = document.getElementById('settings');
+            const gameOverOverlay = document.getElementById('gameover');
+            const finalStats = document.getElementById('finalStats');
+            const bestStats = document.getElementById('bestStats');
+            const bestIntro = document.getElementById('bestIntro');
+            const btnLeft = document.getElementById('left');
+            const btnRight = document.getElementById('right');
+            const btnPause = document.getElementById('pause');
+            const btnPlay = document.getElementById('play');
+            const btnRestart = document.getElementById('restart');
+            const btnOpenSettings = document.getElementById('openSettings');
+            const btnCloseSettings = document.getElementById('closeSettings');
+
+            const colorInput = document.getElementById('carColor');
+            const modelSelect = document.getElementById('carModel');
+            const colorInput2 = document.getElementById('carColor2');
+            const modelSelect2 = document.getElementById('carModel2');
+            const nameInput = document.getElementById('driverName');
+            const nameInput2 = document.getElementById('driverName2');
+
+            let devicePixelRatioCached = 1;
+            function resize() {
+                const dpr = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
+                devicePixelRatioCached = dpr;
+                const cssW = Math.floor(window.innerWidth);
+                const cssH = Math.floor(window.innerHeight);
+                canvas.style.width = cssW + 'px';
+                canvas.style.height = cssH + 'px';
+                canvas.width = Math.floor(cssW * dpr);
+                canvas.height = Math.floor(cssH * dpr);
+                ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            }
+            window.addEventListener('resize', resize);
+            resize();
+
+            const SETTINGS_KEY = 'racer.settings.v2';
+            const BEST_KEY = 'racer.best.v1';
+
+            function loadSettings() {
+                try {
+                    const s = JSON.parse(localStorage.getItem(SETTINGS_KEY));
+                    if (!s) return { color:'#22d3ee', model:'sport', name:'' };
+                    return { color: s.color || '#22d3ee', model: s.model || 'sport', name: (s.name || '').toString().slice(0,16) };
+                } catch { return { color:'#22d3ee', model:'sport', name:'' }; }
+            }
+            function saveSettings(s) {
+                try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(s)); } catch {}
+            }
+            function loadBest() { try { return Number(localStorage.getItem(BEST_KEY)) || 0; } catch { return 0; } }
+            function saveBest(v) { try { localStorage.setItem(BEST_KEY, String(v)); } catch {} }
+
+            const state = {
+                running: false,
+                paused: false,
+                time: 0,
+                lastFrameMs: performance.now(),
+                accum: 0,
+                score: 0,
+                best: loadBest(),
+                maxSpeed: 0,
+                road: {}
+            };
+
+            const player = { x: 0, y: 0, w: 34, h: 60, speedX: 0, maxXSpeed: 420, accelX: 1800, color:'#22d3ee', model:'sport', name:'' };
+            const world = { speed: 200, maxSpeed: 820, accel: 8, laneCount: 3, laneWidth: 0, traffic: [], spawnTimer: 0, laneNextY: [] };
+
+            const MODEL_STYLE = {
+                sport:  { ratio: 1.55, maxXSpeed: 500, accelX: 2200 },
+                sedan:  { ratio: 1.7,  maxXSpeed: 420, accelX: 1800 },
+                compact:{ ratio: 1.5,  maxXSpeed: 380, accelX: 1600 }
+            };
+
+            function applyPlayerStyle() {
+                const style = MODEL_STYLE[player.model] || MODEL_STYLE.sedan;
+                player.h = Math.floor(player.w * style.ratio);
+                player.maxXSpeed = style.maxXSpeed;
+                player.accelX = style.accelX;
+            }
+
+            function reset() {
+                const w = canvas.width / devicePixelRatioCached;
+                const h = canvas.height / devicePixelRatioCached;
+                world.laneWidth = Math.max(70, Math.min(140, Math.floor(w / (Math.max(3, world.laneCount) + 1))));
+                const roadW = world.laneWidth * world.laneCount;
+                state.road = { left: Math.floor((w - roadW) / 2), right: Math.floor((w + roadW) / 2), top: 0, bottom: h };
+                player.w = Math.floor(world.laneWidth * 0.48);
+                applyPlayerStyle();
+                player.x = Math.floor((w - player.w) / 2);
+                player.y = Math.floor(h - player.h - 20);
+                player.speedX = 0;
+                world.traffic = [];
+                world.laneNextY = Array.from({length: world.laneCount}, ()=> -60);
+                // Pre-spawn seguro: como máximo world.laneCount-1 coches en la ventana
+                let attempts = 0;
+                while (attempts < 6 && world.traffic.length < world.laneCount - 1){
+                    spawnCar(); attempts++;
+                }
+                world.speed = 170; // un poco más bajo aún
+                state.score = 0;
+                state.maxSpeed = 0;
+                world.spawnTimer = 1.3; // primer spawn con más margen
+                if (trafficEl) trafficEl.textContent = 'Tráfico: ' + world.traffic.length;
+            }
+
+            function rand(min, max) { return Math.random() * (max - min) + min; }
+            function choice(arr) { return arr[(Math.random() * arr.length) | 0]; }
+
+            function laneIndexFromX(x){
+                const rel = x - state.road.left;
+                return Math.max(0, Math.min(world.laneCount-1, Math.floor(rel / world.laneWidth)));
+            }
+            function laneCenterX(lane){
+                return state.road.left + lane * world.laneWidth + (world.laneWidth - player.w) / 2;
+            }
+            function laneHasCarInWindow(lane, top, bottom){
+                for(const c of world.traffic){
+                    if(laneIndexFromX(c.x) === lane && c.y + c.h > top && c.y < bottom) return true;
+                }
+                return false;
+            }
+            function lanesOccupiedInWindow(top, bottom){
+                const occ = new Set();
+                for(const c of world.traffic){
+                    if(c.y + c.h > top && c.y < bottom){ occ.add(laneIndexFromX(c.x)); }
+                }
+                return occ;
+            }
+
+            function spawnCar() {
+                const w = Math.floor(player.w * rand(.9, 1.1));
+                const h = Math.floor(player.h * rand(.9, 1.15));
+                const speed = world.speed * rand(.9, 1.05);
+                const color = choice(['#ef4444', '#22c55e', '#eab308', '#6366f1', '#14b8a6', '#f97316']);
+
+                const lanes = Array.from({length: world.laneCount}, (_,i)=>i).sort(()=>Math.random()-0.5);
+                // Ventana de seguridad alrededor del jugador: zona donde debe quedar al menos un carril libre
+                const windowTop = Math.max(-200, player.y - 20);
+                const windowBottom = player.y + player.h + 220;
+                const occupied = lanesOccupiedInWindow(windowTop, windowBottom);
+                const maxAllowedOccupied = Math.max(0, world.laneCount - 1);
+
+                for(const lane of lanes){
+                    const laneX = laneCenterX(lane);
+                    // separación mínima por carril
+                    const minGap = Math.max(230, 360 - world.speed * 0.3);
+                    const jitter = Math.random()*80;
+                    const lastY = world.laneNextY[lane] ?? -10;
+                    let y = (lastY) - (h + minGap + jitter);
+                    y = Math.min(y, -h - minGap); // mantener fuera de pantalla
+
+                    // Evitar aparecer justo delante del jugador
+                    const safeAhead = Math.max(200, 300 - world.speed*0.2);
+                    if (y > player.y - safeAhead - h) y = player.y - safeAhead - h - 20;
+
+                    // Si este spawn haría que todos los carriles queden ocupados cerca del jugador, reposicionar o saltar
+                    const wouldOccupy = (y + h > windowTop && y < windowBottom);
+                    if (wouldOccupy) {
+                        const tmpOcc = new Set(occupied);
+                        tmpOcc.add(lane);
+                        if (tmpOcc.size >= world.laneCount) {
+                            // Reubicar por encima de la ventana segura, para no bloquear
+                            y = windowTop - h - minGap - 40;
+                        }
+                    }
+
+                    // Vuelve a comprobar ocupación; si aún bloquearía, omítelo
+                    if (y + h > windowTop && y < windowBottom){
+                        const tmpOcc2 = new Set(occupied); tmpOcc2.add(lane);
+                        if (tmpOcc2.size >= world.laneCount) continue;
+                    }
+
+                    world.traffic.push({ x: laneX, y, w, h, speed, color });
+                    world.laneNextY[lane] = y; // actualizar separación por carril
+                    return;
+                }
+                // Si ningún carril es seguro, retrasar ligeramente
+                world.spawnTimer = Math.max(world.spawnTimer, 0.4);
+            }
+            function forceCarAt(yCss){
+                const lane = Math.min(Math.max(1, (world.laneCount/2)|0), world.laneCount-1);
+                const laneX = state.road.left + lane * world.laneWidth + (world.laneWidth - player.w) / 2;
+                const w = Math.floor(player.w * 1.0);
+                const h = Math.floor(player.h * 1.0);
+                const speed = world.speed;
+                const color = '#ff00ff';
+                world.traffic.push({ x: laneX, y: yCss, w, h, speed, color });
+            }
+
+            function rectsOverlap(a, b) { return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y; }
+
+            const keys = { left: false, right: false };
+            function isTypingEvent(e){
+                const el = e && e.target;
+                if (!el) return false;
+                const tag = el.tagName;
+                return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable;
+            }
+            window.addEventListener('keydown', (e) => {
+                if (isTypingEvent(e)) return; // ignore shortcuts while typing
+                if (e.key === 'ArrowLeft' || e.key === 'a') keys.left = true;
+                if (e.key === 'ArrowRight' || e.key === 'd') keys.right = true;
+                if (e.key === 'p') togglePause();
+                if (e.key === 'r') restart();
+            });
+            window.addEventListener('keyup', (e) => {
+                if (isTypingEvent(e)) return; // ignore while typing
+                if (e.key === 'ArrowLeft' || e.key === 'a') keys.left = false;
+                if (e.key === 'ArrowRight' || e.key === 'd') keys.right = false;
+            });
+
+            function bindHold(btn, prop) {
+                let holding = false;
+                const on = () => { holding = true; keys[prop] = true; };
+                const off = () => { holding = false; keys[prop] = false; };
+                btn.addEventListener('pointerdown', (e) => { e.preventDefault(); btn.setPointerCapture(e.pointerId); on(); });
+                btn.addEventListener('pointerup', () => off());
+                btn.addEventListener('pointercancel', () => off());
+                btn.addEventListener('pointerleave', () => off());
+            }
+            bindHold(btnLeft, 'left');
+            bindHold(btnRight, 'right');
+            btnPause.addEventListener('click', () => togglePause());
+            btnPlay.addEventListener('click', () => start());
+            btnRestart.addEventListener('click', () => restart());
+            btnOpenSettings.addEventListener('click', () => { openSettings(); });
+            btnCloseSettings.addEventListener('click', () => { closeSettings(); });
+
+            function togglePause() { if (!state.running) return; state.paused = !state.paused; if (!state.paused) { state.lastFrameMs = performance.now(); requestAnimationFrame(loop); } }
+            function start() { startOverlay.classList.add('hidden'); gameOverOverlay.classList.add('hidden'); settingsOverlay.classList.add('hidden'); reset(); state.running = true; state.paused = false; state.lastFrameMs = performance.now(); render(); requestAnimationFrame(loop); }
+            function restart() { startOverlay.classList.add('hidden'); gameOverOverlay.classList.add('hidden'); settingsOverlay.classList.add('hidden'); start(); }
+            function openSettings(){ if(state.running){ state.paused = true; } syncFormToUI(); settingsOverlay.classList.remove('hidden'); }
+            function closeSettings(){ settingsOverlay.classList.add('hidden'); if(state.running){ state.lastFrameMs = performance.now(); state.paused = false; requestAnimationFrame(loop); } }
+
+            function drawRoad(w, h) {
+                const road = state.road;
+                // Background
+                const g = ctx.createLinearGradient(0, 0, 0, h);
+                g.addColorStop(0, '#0b1020'); g.addColorStop(1, '#0b1020');
+                ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+
+                // Road area
+                ctx.fillStyle = '#1f2937';
+                ctx.fillRect(road.left, 0, road.right - road.left, h);
+
+                // Road borders
+                ctx.fillStyle = '#9ca3af';
+                ctx.fillRect(road.left - 4, 0, 4, h);
+                ctx.fillRect(road.right, 0, 4, h);
+
+                // Lane markers animated
+                const dashH = 28; const gap = 22; const total = dashH + gap;
+                const offsetY = (state.time * world.speed * 0.06) % total;
+                ctx.fillStyle = '#e5e7eb';
+                for (let i = 1; i < world.laneCount; i++) {
+                    const x = Math.floor(road.left + i * world.laneWidth - 2);
+                    for (let y = -dashH; y < h + dashH; y += total) { ctx.fillRect(x, Math.floor(y + offsetY), 4, dashH); }
+                }
+            }
+            
+            // --- CÓDIGO CORREGIDO: FUNCIONES AÑADIDAS ---
+            function lighten(hex, percent) {
+                hex = hex.replace(/^#/, '');
+                const val = parseInt(hex, 16);
+                const r = (val >> 16) & 255;
+                const g = (val >> 8) & 255;
+                const b = val & 255;
+                const p = Math.max(0, Math.min(100, percent)) / 100;
+                const newR = Math.min(255, r + (255 - r) * p);
+                const newG = Math.min(255, g + (255 - g) * p);
+                const newB = Math.min(255, b + (255 - b) * p);
+                return `#${Math.round(newR).toString(16).padStart(2, '0')}${Math.round(newG).toString(16).padStart(2, '0')}${Math.round(newB).toString(16).padStart(2, '0')}`;
+            }
+
+            function darken(hex, percent) {
+                hex = hex.replace(/^#/, '');
+                const val = parseInt(hex, 16);
+                const r = (val >> 16) & 255;
+                const g = (val >> 8) & 255;
+                const b = val & 255;
+                const p = Math.max(0, Math.min(100, percent)) / 100;
+                const newR = Math.max(0, r * (1 - p));
+                const newG = Math.max(0, g * (1 - p));
+                const newB = Math.max(0, b * (1 - p));
+                return `#${Math.round(newR).toString(16).padStart(2, '0')}${Math.round(newG).toString(16).padStart(2, '0')}${Math.round(newB).toString(16).padStart(2, '0')}`;
+            }
+             // --- FIN DEL CÓDIGO CORREGIDO ---
+
+            function drawCar(car, isPlayer) {
+                const r = 10;
+                // Under shadow
+                ctx.save();
+                ctx.globalAlpha = 0.35;
+                ctx.fillStyle = '#000';
+                const sh = Math.max(6, Math.floor(car.h*0.12));
+                const sw = Math.floor(car.w*0.9);
+                ctx.beginPath();
+                ctx.ellipse(car.x+car.w/2, car.y+car.h-6, sw/2, sh/2, 0, 0, Math.PI*2);
+                ctx.fill();
+                ctx.restore();
+
+                // Body gradient
+                const baseColor = isPlayer ? (player.color || '#22d3ee') : (car.color || '#888888');
+                const g = ctx.createLinearGradient(car.x, car.y, car.x, car.y+car.h);
+                g.addColorStop(0, lighten(baseColor, 25));
+                g.addColorStop(0.45, baseColor);
+                g.addColorStop(1, darken(baseColor, 25));
+                ctx.fillStyle = g;
+                roundRect(car.x, car.y, car.w, car.h, r);
+                ctx.fill();
+                // Outline to ensure visibility
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = 'rgba(0,0,0,0.7)';
+                ctx.stroke();
+
+                // Central stripe for player
+                if (isPlayer) {
+                    ctx.fillStyle = 'rgba(255,255,255,0.18)';
+                    const stripeW = Math.max(4, Math.floor(car.w*0.18));
+                    ctx.fillRect(Math.floor(car.x + car.w/2 - stripeW/2), Math.floor(car.y + car.h*0.08), stripeW, Math.floor(car.h*0.84));
+                }
+
+                // Windows (glass)
+                ctx.fillStyle = 'rgba(255,255,255,.25)';
+                ctx.fillRect(car.x + car.w * 0.18, car.y + car.h * 0.08, car.w * 0.64, car.h * 0.26);
+
+                // Lights
+                // Headlights
+                ctx.save();
+                ctx.globalAlpha = 0.9;
+                ctx.fillStyle = '#fffbcc';
+                const lh = Math.max(5, Math.floor(car.h*0.06));
+                ctx.fillRect(car.x + 4, Math.floor(car.y + car.h*0.02), Math.floor(car.w*0.25), lh);
+                ctx.fillRect(car.x + car.w - Math.floor(car.w*0.25) - 4, Math.floor(car.y + car.h*0.02), Math.floor(car.w*0.25), lh);
+                ctx.restore();
+                // Taillights
+                ctx.fillStyle = 'rgba(239,68,68,.9)';
+                ctx.fillRect(car.x + 5, Math.floor(car.y + car.h - lh - 4), Math.floor(car.w*0.22), lh);
+                ctx.fillRect(car.x + car.w - Math.floor(car.w*0.22) - 5, Math.floor(car.y + car.h - lh - 4), Math.floor(car.w*0.22), lh);
+
+                // Wheels
+                ctx.fillStyle = 'rgba(0,0,0,.8)';
+                const wh = Math.max(6, Math.floor(car.w * 0.18));
+                const wy1 = Math.floor(car.y + car.h*0.16);
+                const wy2 = Math.floor(car.y + car.h*0.7);
+                ctx.fillRect(car.x - 3, wy1, wh, wh);
+                ctx.fillRect(car.x - 3, wy2, wh, wh);
+                ctx.fillRect(car.x + car.w - wh + 3, wy1, wh, wh);
+                ctx.fillRect(car.x + car.w - wh + 3, wy2, wh, wh);
+
+                // Highlights
+                ctx.save();
+                ctx.globalAlpha = 0.25;
+                ctx.fillStyle = '#fff';
+                roundRect(car.x + car.w*0.08, car.y + car.h*0.18, car.w*0.22, car.h*0.18, 6);
+                ctx.fill();
+                ctx.restore();
+
+                // Player name above car
+                if (isPlayer && player.name) {
+                    const label = player.name;
+                    ctx.font = Math.max(12, Math.floor(car.w*0.5)) + 'px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'bottom';
+                    const tx = Math.floor(car.x + car.w/2);
+                    const ty = Math.floor(car.y - 6);
+                    // outline for readability
+                    ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,0,0,0.85)'; ctx.strokeText(label, tx, ty);
+                    ctx.fillStyle = '#ffffff'; ctx.fillText(label, tx, ty);
+                }
+            }
+
+            function roundRect(x, y, w, h, r) {
+                ctx.beginPath();
+                ctx.moveTo(x + r, y);
+                ctx.arcTo(x + w, y, x + w, y + h, r);
+                ctx.arcTo(x + w, y + h, x, y + h, r);
+                ctx.arcTo(x, y + h, x, y, r);
+                ctx.arcTo(x, y, x + w, y, r);
+                ctx.closePath();
+            }
+
+            function update(dt) {
+                // Speed progression
+                world.speed = Math.min(world.maxSpeed, world.speed + world.accel * dt);
+                state.maxSpeed = Math.max(state.maxSpeed, world.speed);
+
+                // Player lateral movement
+                const target = (keys.left ? -1 : 0) + (keys.right ? 1 : 0);
+                const desired = target * player.maxXSpeed;
+                if (desired !== 0) {
+                    const dir = Math.sign(desired - player.speedX);
+                    player.speedX += dir * player.accelX * dt;
+                    if (Math.sign(desired - player.speedX) !== dir) player.speedX = desired; // clamp overshoot
+                } else {
+                    // friction
+                    const fr = player.accelX * 1.8 * dt;
+                    if (Math.abs(player.speedX) <= fr) player.speedX = 0; else player.speedX -= Math.sign(player.speedX) * fr;
+                }
+                player.x += player.speedX * dt;
+
+                // clamp inside road
+                const minX = state.road.left + 6;
+                const maxX = state.road.right - player.w - 6;
+                if (player.x < minX) { player.x = minX; player.speedX = 0; }
+                if (player.x > maxX) { player.x = maxX; player.speedX = 0; }
+
+                // Traffic spawn
+                world.spawnTimer -= dt;
+                if (world.spawnTimer <= 0) {
+                    spawnCar();
+                    world.spawnTimer = Math.max(0.45, 1.3 - world.speed / 600); // faster -> more traffic
+                }
+
+                // Move traffic
+                const vy = world.speed * dt;
+                for (let i = world.traffic.length - 1; i >= 0; i--) {
+                    const c = world.traffic[i];
+                    c.y += vy * (c.speed / world.speed);
+                    if (c.y > canvas.height / devicePixelRatioCached + 40) world.traffic.splice(i, 1);
+                }
+
+                // Ensure cars exist after a short time sin bloquear todos los carriles
+                if (world.traffic.length === 0 && state.time > 0.6) {
+                    spawnCar();
+                }
+
+                // Collisions and score
+                for (const c of world.traffic) { if (rectsOverlap(player, c)) { return endGame(); } }
+                state.score += world.speed * dt * 0.1;
+
+                // Asegura que no se sobre-ocupe la ventana: limita spawns
+                if (state.time > 0.6){
+                    const occ = lanesOccupiedInWindow(player.y - 20, player.y + player.h + 220);
+                    if (occ.size >= world.laneCount - 0){
+                        // demasiados carriles ocupados cerca: retrasa spawns
+                        world.spawnTimer = Math.max(world.spawnTimer, 0.3);
+                    }
+                }
+            }
+
+            function endGame() {
+                state.running = false;
+                const pts = Math.floor(state.score);
+                const vmax = Math.round(state.maxSpeed);
+                if (pts > state.best) { state.best = pts; saveBest(pts); }
+                finalStats.textContent = `Puntos: ${pts} · Máx. velocidad: ${vmax}`;
+                bestStats.textContent = `Mejor: ${state.best}`;
+                bestEl.textContent = 'Mejor: ' + state.best;
+                settingsOverlay.classList.add('hidden');
+                gameOverOverlay.classList.remove('hidden');
+            }
+
+            function render() {
+                const w = canvas.width / devicePixelRatioCached;
+                const h = canvas.height / devicePixelRatioCached;
+                drawRoad(w, h);
+                for (const c of world.traffic) drawCar(c, false);
+                drawCar(player, true);
+            }
+
+            let fpsTimer = 0, frames = 0;
+            function loop(now) {
+                if (!state.running) return;
+                const dt = Math.min(0.033, Math.max(0, (now - state.lastFrameMs) / 1000));
+                state.lastFrameMs = now;
+                state.time += dt;
+                if (!state.paused) {
+                    update(dt);
+                    render();
+                    scoreEl.textContent = 'Puntos: ' + Math.floor(state.score);
+                    speedEl.textContent = 'Velocidad: ' + Math.round(world.speed);
+                    bestEl.textContent = 'Mejor: ' + state.best;
+                    if (trafficEl) trafficEl.textContent = 'Tráfico: ' + world.traffic.length;
+                }
+                frames++; fpsTimer += dt; if (fpsTimer >= 0.5) { fpsEl.textContent = 'FPS: ' + Math.round(frames / fpsTimer); fpsTimer = 0; frames = 0; }
+                requestAnimationFrame(loop);
+            }
+
+            // Settings sync
+            function syncFormToUI(){
+                const s = loadSettings();
+                colorInput.value = s.color;
+                modelSelect.value = s.model;
+                colorInput2.value = s.color;
+                modelSelect2.value = s.model;
+                nameInput.value = s.name || '';
+                nameInput2.value = s.name || '';
+                player.color = s.color;
+                player.model = s.model;
+                player.name = (s.name || '').toString().slice(0,16);
+                applyPlayerStyle();
+            }
+            function syncUIToSettings(fromSecondary){
+                const color = (fromSecondary? colorInput2.value : colorInput.value) || '#22d3ee';
+                const model = (fromSecondary? modelSelect2.value : modelSelect.value) || 'sport';
+                const rawName = (fromSecondary? nameInput2.value : nameInput.value) || '';
+                const safeName = rawName.replace(/\s+/g,' ').trim().slice(0,16);
+                const s = { color, model, name: safeName };
+                saveSettings(s);
+                player.color = color;
+                player.model = model;
+                player.name = safeName;
+                applyPlayerStyle();
+            }
+
+            colorInput.addEventListener('input', ()=> syncUIToSettings(false));
+            modelSelect.addEventListener('change', ()=> syncUIToSettings(false));
+            colorInput2.addEventListener('input', ()=> syncUIToSettings(true));
+            modelSelect2.addEventListener('change', ()=> syncUIToSettings(true));
+            nameInput.addEventListener('input', ()=> syncUIToSettings(false));
+            nameInput2.addEventListener('input', ()=> syncUIToSettings(true));
+
+            // Init UI state
+            syncFormToUI();
+            bestEl.textContent = 'Mejor: ' + state.best;
+            bestIntro.textContent = 'Mejor: ' + state.best;
+
+            // Auto start on key/tap
+            canvas.addEventListener('pointerdown', () => { if (!state.running) start(); });
+        })();
+    </script>
+</body>
+
+</html>
